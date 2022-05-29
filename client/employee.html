@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title></title>
+  </head>
+  <style>
+    div {
+      display: inline-table;
+      width: 49%;
+    }
+  </style>
+  <script>
+    var genders;
+    var oldEmployee;
+
+    function loadData() {
+      loadEmployee();
+      loadGender();
+    }
+    function loadEmployee() {
+      var http = new XMLHttpRequest();
+      http.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          var jsonData = this.responseText;
+          showTable(jsonData);
+        }
+      };
+
+      http.open("GET", "../server/employee.php", true);
+      http.send();
+    }
+
+    function loadGender() {
+      var http = new XMLHttpRequest();
+      http.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          var jsonData = this.responseText;
+          showGender(jsonData);
+        }
+      };
+
+      http.open("GET", "../server/gender.php", true);
+      http.send();
+    }
+
+    function showGender(jsonData) {
+      genders = JSON.parse(jsonData);
+
+      for (let i = 0; i < genders.length; i++) {
+        const gender = genders[i];
+
+        var txtOption = document.createElement("option");
+        txtOption.innerHTML = gender["name"];
+        txtOption.value = gender["id"];
+
+        cmbGender.appendChild(txtOption);
+      }
+    }
+
+    function showTable(jsonData) {
+      display.innerHTML = "";
+      var employees = JSON.parse(jsonData);
+
+      for (let i = 0; i < employees.length; i++) {
+        const employee = employees[i];
+
+        var tr = document.createElement("tr");
+
+        var tdId = document.createElement("td");
+        tdId.innerHTML = employee["id"];
+        tr.appendChild(tdId);
+
+        var tdName = document.createElement("td");
+        tdName.innerHTML = employee["name"];
+        tr.appendChild(tdName);
+
+        var tdAge = document.createElement("td");
+        tdAge.innerHTML = employee["age"];
+        tr.appendChild(tdAge);
+
+        var tdGender = document.createElement("td");
+        tdGender.innerHTML = employee["gender"];
+        tr.appendChild(tdGender);
+
+        // delete button
+        var tdDelete = document.createElement("td");
+        var btnDelete = document.createElement("input");
+        btnDelete.value = "Delete";
+        btnDelete.type = "button";
+        btnDelete.addEventListener("click", function () {
+          deleteEmployee(employee);
+        });
+        tdDelete.appendChild(btnDelete);
+        tr.appendChild(tdDelete);
+
+        // update button
+        var tdChange = document.createElement("td");
+        var btnChange = document.createElement("input");
+        btnChange.value = "Change";
+        btnChange.type = "button";
+        btnChange.addEventListener("click", function () {
+          changeEmployee(employee);
+        });
+        tdChange.appendChild(btnChange);
+        tr.appendChild(tdChange);
+
+        display.appendChild(tr);
+      }
+    }
+
+    function changeEmployee(employee) {
+      var userConfirm = window.confirm(
+        "Are you sure want to update this. employee " + employee["id"]
+      );
+      if (userConfirm) {
+        txtName.value = employee["name"];
+        txtAge.value = employee["age"];
+        cmbGender.value = employee["gender_id"];
+      }
+
+      oldEmployee = employee;
+
+      btnSubmit.setAttribute("hidden", "hidden");
+      btnUpdate.removeAttribute("hidden");
+    }
+
+    function deleteEmployee(employee) {
+      var userConfirm = window.confirm(
+        "Are you sure want to delete this. employee" + employee["id"]
+      );
+      if (userConfirm) {
+        var http = new XMLHttpRequest();
+        http.onreadystatechange = function () {
+          if (this.readyState == 4 && this.status == 200) {
+            loadEmployee();
+          }
+        };
+      }
+      http.open(
+        "DELETE",
+        "../server/delete.php?employeeId=" + employee["id"],
+        true
+      );
+      http.send();
+    }
+
+    function addEmployee(id) {
+      var name = txtName.value;
+      var age = txtAge.value;
+      var gender = cmbGender.value;
+
+      var http = new XMLHttpRequest();
+      http.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          if (this.responseText === "true") {
+            loadEmployee();
+          }
+        }
+      };
+
+      http.open("POST", "../server/insert.php", true);
+      http.setRequestHeader(
+        "Content-type",
+        "application/x-www-form-urlencoded"
+      );
+      http.send("txtName=" + name + "&txtAge=" + age + "&txtGender=" + gender);
+    }
+
+    function updateEmployee(id) {
+      var nameText = "";
+      var ageText = "";
+      var genderText = "";
+
+      if (oldEmployee.name !== txtName.value) {
+        nameText = "\n\nName : " + oldEmployee.name + " to " + txtName.value;
+      }
+      if (oldEmployee.age !== txtAge.value) {
+        ageText = "\n\nAge : " + oldEmployee.age + " to " + txtAge.value;
+      }
+      if (oldEmployee.gender_id !== cmbGender.value) {
+        genderText =
+          "\n\nGender : " +
+          oldEmployee.gender +
+          " to " +
+          genders[cmbGender.value - 1].name;
+      }
+      if (nameText == "" && ageText == "" && genderText == "") {
+        window.alert("No updates");
+      } else {
+        var userConfirm = window.confirm(
+          "Are you sure you want to update this employee : " +
+            oldEmployee["name"] +
+            nameText +
+            ageText +
+            genderText
+        );
+        var name = txtName.value;
+        var age = txtAge.value;
+        var gender = cmbGender.value;
+
+        var http = new XMLHttpRequest();
+        http.onreadystatechange = function () {
+          if (this.readyState == 4 && this.status == 200) {
+            if (this.responseText === "true") {
+              loadEmployee();
+              clearForm();
+              oldEmployee = null;
+            }
+          }
+        };
+
+        http.open("POST", "../server/update.php", true);
+        http.setRequestHeader(
+          "Content-type",
+          "application/x-www-form-urlencoded"
+        );
+        http.send(
+          "txtName=" +
+            name +
+            "&txtAge=" +
+            age +
+            "&txtGender=" +
+            gender +
+            "&txtId=" +
+            oldEmployee.id
+        );
+      }
+    }
+
+    function clearForm() {
+      btnUpdate.setAttribute("hidden", "hidden");
+      btnSubmit.removeAttribute("hidden");
+    }
+  </script>
+
+  <body onload="loadData()">
+    <div>
+      <h1>Add Employee</h1>
+      <form>
+        Enter Name :
+        <input id="txtName" />
+        <br /><br />
+        Enter Age :
+        <input id="txtAge" />
+        <br /><br />
+        Enter Gender :
+        <select id="cmbGender"></select>
+        <br /><br />
+
+        <input value="Clear" type="reset" onclick="clearForm()" />
+        <input
+          id="btnSubmit"
+          value="Submit"
+          type="button"
+          onclick="addEmployee()"
+        />
+        <input
+          id="btnUpdate"
+          value="Update"
+          type="button"
+          onclick="updateEmployee()"
+          hidden="hidden"
+        />
+      </form>
+    </div>
+    <div>
+      <h1>Employee Table</h1>
+      <table cellspacing="1" cellpadding="10" border="1">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Age</th>
+            <th>Gender</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="display"></tbody>
+      </table>
+    </div>
+  </body>
+</html>
